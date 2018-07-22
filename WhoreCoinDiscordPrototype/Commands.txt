@@ -1,0 +1,52 @@
+﻿All commands are prefixes with !whore
+Commands are all case-sensitive. Lowercase always unless denoted otherwise.
+
+Get a leaderboard on your server of who holds the most coins:
+
+        topwhores
+
+
+As an admin, create new coins. Multiple users distribute the number as evenly as possible
+(a few coins may not be generated during this process due to rounding distributions)
+Mentioning no one uses the command on yourself:
+
+        rollthatdough <number>
+
+        rollthatdough <number> [mentioned users]
+
+
+Give coins to another user:
+
+        give <mentioned user> <number>
+
+
+Check your balance, or check multiple users' balances
+
+        balance
+
+        balance [mentioned users]
+
+
+As an admin, take someone's coins and put them into your own collection
+Multiple users steal from all users as evenly as possible (end total gained may be less):
+
+        steal <number> [mentioned users]
+
+
+Set users' balances to zero (even your own).
+
+        povertyhammer [mentioned users]
+
+
+An admin can create a raffle (with no entry cost)
+that allows users to get new, untainted coins:
+
+        raffle start
+
+        raffle enter
+
+        raffle end
+
+        raffle progress
+
+

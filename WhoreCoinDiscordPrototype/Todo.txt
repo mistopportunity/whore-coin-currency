@@ -1,0 +1,2 @@
+﻿Merge server manager with a datbase to save its server list
+	-be sure to save on individual transactions when it is applicable to, too
