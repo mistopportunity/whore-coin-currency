@@ -193,7 +193,14 @@ namespace WhoreCoinDiscordPrototype {
 
 									if(message.MentionedUsers.Count == 0) {
 										if(splitMessage.Length == 2) {
-											await channel.SendMessageAsync("The poverty hammer is not to be taken lightly");
+											if(splitMessage[2] == "@everyone") {
+												foreach(var bankAccount in server.BankAccounts) {
+													await server.ClearBalance(bankAccount.Key);
+													await channel.SendMessageAsync("All whore coins have been cleared from the server");
+												}
+											} else {
+												await channel.SendMessageAsync("The poverty hammer is not to be taken lightly");
+											}
 										}
 									} else {
 										StringBuilder builder = new StringBuilder();
