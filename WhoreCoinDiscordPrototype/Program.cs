@@ -12,14 +12,23 @@ namespace WhoreCoinDiscordPrototype {
 		private const string CommandPrefix = "!whore";
 		private const int RaffleMultiplier = 5;
 
+		private static ulong superAdmin = 0;
+
 		private static readonly Random random = new Random();
 
 		private DiscordSocketClient client;
 
 		private static void Main(string[] args) {
 
-			//Database setup and loading
+			if(!ServerManager.Initialize()) {
+				Console.WriteLine("Failed to initialize ServerManager");
+				return;
+			}
 
+			ulong.TryParse(
+				Environment.GetEnvironmentVariable("superadmin"),
+				out superAdmin
+			);
 
 			new Program().MainAsync().GetAwaiter().GetResult();
 		}
@@ -72,7 +81,7 @@ namespace WhoreCoinDiscordPrototype {
 						var user = message.Author as SocketGuildUser;
 						var userId = user.Id;
 
-						var isSuperAdmin = Environment.GetEnvironmentVariable("superadmin") == userId.ToString();
+						var isSuperAdmin = superAdmin == userId;
 
 						var isAdmin = isSuperAdmin || user.GuildPermissions.Administrator;
 
@@ -104,9 +113,10 @@ namespace WhoreCoinDiscordPrototype {
 
 										if(isAdmin) {
 											if(!server.RaffleActive) {
-												await channel.SendMessageAsync($"A raffle has started! To enter, do {CommandPrefix} raffle enter");
 												server.RaffleChannelId = channelId;
 												server.RaffleActive = true;
+												await channel.SendMessageAsync($"A raffle has started! To enter, do {CommandPrefix} raffle enter");
+												await server.SaveRaffleList();
 											} else {
 												await channel.SendMessageAsync("There is already an active raffle");
 											}
@@ -120,22 +130,29 @@ namespace WhoreCoinDiscordPrototype {
 										if(isAdmin) {
 											if(server.RaffleActive) {
 
+												var raffleChannel = client.GetChannel(server.RaffleChannelId);
+
 												if(server.RaffleMembers.Count < 2) {
-													await channel.SendMessageAsync($"Sorry, not enough people {server.RaffleMembers.Count} joined the raffle (3 or more needed)");
+													await ((SocketTextChannel)raffleChannel).SendMessageAsync($"Sorry, not enough people ({server.RaffleMembers.Count}) joined the raffle (3 or more needed)");
 												} else {
 
 													var winnerIndex = random.Next(0,server.RaffleMembers.Count);
 													var winnerUser = client.GetUser(server.RaffleMembers[winnerIndex]);
-													var raffleChannel = client.GetChannel(server.RaffleChannelId);
 
 													var winnings = RaffleMultiplier * server.RaffleMembers.Count;
-													server.AddBalance(winnerUser.Id,(ulong)winnings);
+													await server.AddBalance(winnerUser.Id,(ulong)winnings);
 
 													await ((SocketTextChannel)raffleChannel).SendMessageAsync($"Congratulations {winnerUser.Mention}! You won {winnings} whore coins from the raffle!");
 
-													server.RaffleMembers.Clear();
-													server.RaffleActive = false;
+
+
+
 												}
+
+												server.RaffleMembers.Clear();
+												server.RaffleActive = false;
+												await server.SaveRaffleList();
+
 
 											} else {
 												await channel.SendMessageAsync($"There isn't currently a raffle. First, try !{CommandPrefix} raffle start");
@@ -148,10 +165,10 @@ namespace WhoreCoinDiscordPrototype {
 										if(server.RaffleActive) {
 											if(!server.RaffleMembers.Contains(userId)) {
 												if(server.RaffleChannelId == channelId) {
-													server.RaffleMembers.Add(userId);
+													await server.AddRaffleMember(userId);
 													await channel.SendMessageAsync($"{user.Mention} joined the raffle!");
 												} else {
-													server.RaffleMembers.Add(userId);
+													await server.AddRaffleMember(userId);
 													await channel.SendMessageAsync($"Entered raffle at <#{server.RaffleChannelId}>");
 													var raffleChannel = client.GetChannel(server.RaffleChannelId);
 													await ((SocketTextChannel)raffleChannel).SendMessageAsync($"{user.Mention} joined the raffle!");
@@ -182,11 +199,7 @@ namespace WhoreCoinDiscordPrototype {
 										StringBuilder builder = new StringBuilder();
 										foreach(var mentionedUser in message.MentionedUsers) {
 											builder.AppendLine($"{mentionedUser.Username} was hit with the poverty hammer!");
-											var balance = server.GetBalance(mentionedUser.Id);
-											if(balance == 0) {
-												continue;
-											}
-											server.RemoveBalance(mentionedUser.Id,balance);
+											await server.ClearBalance(mentionedUser.Id);
 										}
 										await channel.SendMessageAsync(builder.ToString());
 									}
@@ -236,9 +249,9 @@ namespace WhoreCoinDiscordPrototype {
 													subamount = victimBalance;
 												}
 
-												server.RemoveBalance(mentionedUser.Id,subamount);
+												await server.RemoveBalance(mentionedUser.Id,subamount);
 
-												server.AddBalance(userId,subamount);
+												await server.AddBalance(userId,subamount);
 
 												builder.AppendLine($"Stole {subamount} whore coin{(subamount != 1 ? "s" : string.Empty)} from {mentionedUser.Username}");
 
@@ -317,8 +330,8 @@ namespace WhoreCoinDiscordPrototype {
 
 													if(userBalance >= amount) {
 
-														server.RemoveBalance(userId,amount);
-														server.AddBalance(mentionedUser.Id,amount);
+														await server.RemoveBalance(userId,amount);
+														await server.AddBalance(mentionedUser.Id,amount);
 
 														await channel.SendMessageAsync($"{user.Username} gave {mentionedUser.Username} {amount} whore coin{(amount != 1 ? "s" : string.Empty)}. How kind of them!");
 
@@ -358,14 +371,14 @@ namespace WhoreCoinDiscordPrototype {
 											var subamount = amount / (ulong)message.MentionedUsers.Count;
 
 											foreach(var mentionedUser in message.MentionedUsers) {
-												server.AddBalance(mentionedUser.Id,subamount);
+												await server.AddBalance(mentionedUser.Id,subamount);
 												builder.AppendLine($"Gave {mentionedUser.Username} {subamount} whore coin{(subamount != 1 ? "s" : string.Empty)}");
 
 											}
 
 											await channel.SendMessageAsync(builder.ToString());
 										} else {
-											server.AddBalance(userId,amount);
+											await server.AddBalance(userId,amount);
 											await channel.SendMessageAsync($"Gave {user.Username} {amount} whore coin{(amount != 1 ? "s" : string.Empty)}");
 										}
 
