@@ -394,6 +394,7 @@ namespace WhoreCoinDiscordPrototype {
 							case "topwhores":
 
 								if(server.BankAccounts.Count < 1) {
+									await channel.SendMessageAsync("All users in this server are broke");
 									return;
 								} else {
 									List<Tuple<ulong,ulong>> leaderboard = new List<Tuple<ulong,ulong>>();
@@ -412,7 +413,7 @@ namespace WhoreCoinDiscordPrototype {
 
 										var balance = server.GetBalance(leaderboard[i].Item1);
 
-										builder.AppendLine($"{i+1}. {client.GetUser(leaderboard[i].Item1)} - {balance} whore coin{(balance != 1 ? "s" : string.Empty)}");
+										builder.AppendLine($"{i+1}. {client.GetUser(leaderboard[i].Item1).Username} - {balance} whore coin{(balance != 1 ? "s" : string.Empty)}");
 
 									}
 
